@@ -23,7 +23,7 @@ export default function App() {
   const [showNotificationAlerts, setShowNotificationAlerts] = useState<boolean>(false);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
-  // Synchronize state from API endpoints on initialization
+  
   const fetchAllData = async () => {
     try {
       const [medsRes, logsRes, alertsRes, notesRes] = await Promise.all([
@@ -352,9 +352,9 @@ export default function App() {
       {/* 4. Footer credits with Azure specifications mapped */}
       <footer className="bg-white border-t border-slate-100 py-6 mt-12 text-center text-[11px] text-slate-400 font-mono">
         <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-1">
-          <p>© 2026 MediTrack Cloud System. Designed & Completed for Cloud Application Development (ICT433/Azure Alternate Platform).</p>
-          <p className="text-slate-300">
-            Student: B.G.T.D. Wijerathne | Reg: SEU/IS/20/ICT/055 | Spec: Software
+          <p style={{ color: 'black' }}>© 2026 MediTrack Cloud System. Designed & Completed for Cloud Application Development.</p>
+          <p className="text-slate-300" style={{ color: 'black' }}>
+            Student: B.G.T.D. Wijerathne | Reg: SEU/IS/20/ICT/055 | Specialization: Software
           </p>
           <div className="flex justify-center items-center gap-3 pt-2">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-200 text-[9px]">
