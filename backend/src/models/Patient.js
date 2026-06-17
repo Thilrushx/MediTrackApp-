@@ -11,6 +11,8 @@ const Patient = sequelize.define('Patient', {
   email:       { type: DataTypes.STRING },
   doctorId:    { type: DataTypes.STRING },
   caregiverId: { type: DataTypes.STRING },
+  // userId links a Patient record to its User login account
+  userId:      { type: DataTypes.STRING },
 }, { timestamps: false });
 
 module.exports = Patient;

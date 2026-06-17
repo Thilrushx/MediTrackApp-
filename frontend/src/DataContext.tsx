@@ -1,12 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { User, Patient, Medication, AdherenceLog, EscalationAlert, PatientNote, MedicalReport } from './types';
+import {
+  User, Patient, Medication, AdherenceLog,
+  EscalationAlert, PatientNote, MedicalReport,
+} from './types';
 import { api } from './api';
-
-export const SESSION = {
-  doctor:    'usr-doc-1',
-  caregiver: 'usr-cgv-1',
-  patient:   'pat-1',
-};
+import { useAuth } from './AuthContext';
 
 interface DataCtx {
   loading:     boolean;
@@ -37,6 +35,8 @@ const Ctx = createContext<DataCtx>({
 export const useData = () => useContext(Ctx);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState<string | null>(null);
   const [users,       setUsers]       = useState<User[]>([]);
@@ -48,7 +48,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [reports,     setReports]     = useState<MedicalReport[]>([]);
 
   const fetchAll = useCallback(async () => {
+    if (!isAuthenticated) return;
     setError(null);
+    setLoading(true);
     try {
       const [u, p, m, l, a, n, r] = await Promise.all([
         api.getUsers(),
@@ -72,12 +74,32 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  // Fetch data once auth is resolved and user is authenticated
+  useEffect(() => {
+    if (!authLoading) {
+      if (isAuthenticated) {
+        fetchAll();
+      } else {
+        // Clear all data on logout
+        setUsers([]);
+        setPatients([]);
+        setMedications([]);
+        setLogs([]);
+        setAlerts([]);
+        setNotes([]);
+        setReports([]);
+        setLoading(false);
+      }
+    }
+  }, [authLoading, isAuthenticated, fetchAll]);
 
   return (
-    <Ctx.Provider value={{ loading, error, users, patients, medications, logs, alerts, notes, reports, fetchAll }}>
+    <Ctx.Provider value={{
+      loading, error, users, patients, medications,
+      logs, alerts, notes, reports, fetchAll,
+    }}>
       {children}
     </Ctx.Provider>
   );
