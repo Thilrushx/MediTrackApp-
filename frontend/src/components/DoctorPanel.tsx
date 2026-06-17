@@ -271,7 +271,7 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
                               <div>
                                 <span className="font-semibold text-slate-700">{m.name}</span>
                                 <span className="ml-1.5 text-slate-500">{m.dosage}</span>
-                                <span className="ml-2 font-mono text-slate-400">{m.times.join(', ')}</span>
+                                <span className="ml-2 font-mono text-slate-400">{(Array.isArray(m.times) ? m.times : JSON.parse(m.times || '[]')).join(', ')}</span>
                               </div>
                               <button onClick={async () => { await api.deleteMedication(m.id); onRefresh(); }}
                                 className="text-rose-400 hover:text-rose-600 ml-3 shrink-0">

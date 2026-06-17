@@ -7,7 +7,19 @@ const Medication = sequelize.define('Medication', {
   name:           { type: DataTypes.STRING, allowNull: false },
   dosage:         { type: DataTypes.STRING, allowNull: false },
   frequency:      { type: DataTypes.STRING, allowNull: false },
-  times:          { type: DataTypes.JSON,   allowNull: false },
+  times: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+    get() {
+      const raw = this.getDataValue('times');
+      if (!raw) return [];
+      if (Array.isArray(raw)) return raw;
+      try { return JSON.parse(raw); } catch { return []; }
+    },
+    set(val) {
+      this.setDataValue('times', Array.isArray(val) ? JSON.stringify(val) : val);
+    },
+  },
   category:       { type: DataTypes.STRING, allowNull: false },
   startDate:      { type: DataTypes.DATEONLY, allowNull: false },
   notes:          { type: DataTypes.TEXT },

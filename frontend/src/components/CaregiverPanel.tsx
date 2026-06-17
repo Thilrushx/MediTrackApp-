@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Pill, Bell, ChevronRight, ShieldCheck, AlertTriangle, Clock } from 'lucide-react';
 import { Patient, Medication, AdherenceLog, EscalationAlert } from '../types';
 import { api } from '../api';
@@ -13,7 +13,18 @@ interface Props {
 }
 
 export default function CaregiverPanel({ patients, medications, logs, alerts, caregiverId, onRefresh }: Props) {
-  const [selectedId, setSelectedId] = useState<string | null>(patients[0]?.id || null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Set first patient once data arrives — runs whenever patients list changes
+  useEffect(() => {
+    if (patients.length > 0) {
+      // Always sync to first patient if current selection is not in the list
+      const stillValid = patients.some(p => p.id === selectedId);
+      if (!stillValid) setSelectedId(patients[0].id);
+    } else {
+      setSelectedId(null);
+    }
+  }, [patients]);
 
   const selected  = patients.find(p => p.id === selectedId);
   const patMeds   = medications.filter(m => m.patientId === selectedId);
@@ -134,7 +145,7 @@ export default function CaregiverPanel({ patients, medications, logs, alerts, ca
                           </p>
                           <p className="text-xs text-slate-400 mt-0.5">{m.frequency} · {m.notes || ''}</p>
                           <div className="flex gap-1 mt-1.5">
-                            {m.times.map(t => (
+                            {(Array.isArray(m.times) ? m.times : JSON.parse(m.times || '[]')).map(t => (
                               <span key={t} className="inline-flex items-center gap-0.5 text-[10px] font-mono bg-teal-50 text-teal-700 border border-teal-100 px-1.5 py-0.5 rounded">
                                 <Clock className="w-2.5 h-2.5" />{t}
                               </span>
