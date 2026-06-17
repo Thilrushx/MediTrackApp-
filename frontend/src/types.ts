@@ -71,3 +71,14 @@ export interface PatientNote {
   sideEffects?: string;
   recommendations?: string;
 }
+
+export interface MedicalReport {
+  id: string;
+  patientId: string;
+  name: string;
+  category: 'Lab Result' | 'Prescription' | 'Imaging' | 'Discharge Summary' | 'Other';
+  filename: string;
+  originalName: string;
+  uploadedBy: string;
+  uploadedAt: string;
+}

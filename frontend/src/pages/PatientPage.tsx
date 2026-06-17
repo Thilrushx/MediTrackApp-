@@ -2,12 +2,14 @@ import { RefreshCw } from 'lucide-react';
 import { useData, SESSION } from '../DataContext';
 import PageLayout from '../components/PageLayout';
 import PatientPanel from '../components/PatientPanel';
+import ReportsPanel from '../components/ReportsPanel';
 
 export default function PatientPage() {
-  const { loading, patients, medications, logs, notes, alerts, fetchAll } = useData();
+  const { loading, patients, medications, logs, notes, alerts, reports, fetchAll } = useData();
   const currentPatient = patients.find(p => p.id === SESSION.patient) || null;
   const patientMeds    = medications.filter(m => m.patientId === SESSION.patient);
   const patientLogs    = logs.filter(l => patientMeds.some(m => m.id === l.medicationId));
+  const patientReports = reports.filter(r => r.patientId === SESSION.patient);
 
   return (
     <PageLayout role="patient" alerts={alerts} onRefresh={fetchAll}>
@@ -17,13 +19,30 @@ export default function PatientPage() {
           <span className="text-sm font-mono">Loading Patient Portal...</span>
         </div>
       ) : (
-        <PatientPanel
-          patient={currentPatient}
-          medications={patientMeds}
-          logs={patientLogs}
-          notes={notes}
-          onRefresh={fetchAll}
-        />
+        <div className="space-y-10">
+          <PatientPanel
+            patient={currentPatient}
+            medications={patientMeds}
+            logs={patientLogs}
+            notes={notes}
+            onRefresh={fetchAll}
+          />
+          <div className="border-t border-slate-100 pt-8">
+            <div className="mb-4">
+              <p className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">My Medical Records</p>
+              <h2 className="text-xl font-bold text-slate-900">
+                {currentPatient ? `${currentPatient.name}'s Reports` : 'My Reports'}
+              </h2>
+            </div>
+            <ReportsPanel
+              role="patient"
+              patients={currentPatient ? [currentPatient] : []}
+              reports={patientReports}
+              patientId={SESSION.patient}
+              onRefresh={fetchAll}
+            />
+          </div>
+        </div>
       )}
     </PageLayout>
   );

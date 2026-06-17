@@ -48,4 +48,14 @@ export const api = {
   // Patient Notes
   getNotes:    ()            => req('GET',  '/patient-notes'),
   createNote:  (data: unknown) => req('POST', '/patient-notes', data),
+
+  // Medical Reports
+  getReports: (patientId?: string) =>
+    req('GET', `/reports${patientId ? `?patientId=${patientId}` : ''}`),
+  deleteReport: (id: string) => req('DELETE', `/reports/${id}`),
+  uploadReport: async (formData: FormData) => {
+    const res = await fetch('/api/reports', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
 };

@@ -2,9 +2,10 @@ import { RefreshCw } from 'lucide-react';
 import { useData, SESSION } from '../DataContext';
 import PageLayout from '../components/PageLayout';
 import DoctorPanel from '../components/DoctorPanel';
+import ReportsPanel from '../components/ReportsPanel';
 
 export default function DoctorPage() {
-  const { loading, users, patients, medications, logs, alerts, fetchAll } = useData();
+  const { loading, users, patients, medications, logs, alerts, reports, fetchAll } = useData();
   const caregivers     = users.filter(u => u.role === 'caregiver');
   const doctorPatients = patients.filter(p => p.doctorId === SESSION.doctor);
 
@@ -16,15 +17,25 @@ export default function DoctorPage() {
           <span className="text-sm font-mono">Loading Doctor Portal...</span>
         </div>
       ) : (
-        <DoctorPanel
-          patients={doctorPatients}
-          medications={medications}
-          logs={logs}
-          alerts={alerts}
-          caregivers={caregivers}
-          doctorId={SESSION.doctor}
-          onRefresh={fetchAll}
-        />
+        <div className="space-y-10">
+          <DoctorPanel
+            patients={doctorPatients}
+            medications={medications}
+            logs={logs}
+            alerts={alerts}
+            caregivers={caregivers}
+            doctorId={SESSION.doctor}
+            onRefresh={fetchAll}
+          />
+          <div className="border-t border-slate-100 pt-8">
+            <ReportsPanel
+              role="doctor"
+              patients={doctorPatients}
+              reports={reports}
+              onRefresh={fetchAll}
+            />
+          </div>
+        </div>
       )}
     </PageLayout>
   );

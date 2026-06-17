@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const sequelize = require('./database');
@@ -10,6 +11,7 @@ require('./models/Medication');
 require('./models/AdherenceLog');
 require('./models/EscalationAlert');
 require('./models/PatientNote');
+require('./models/MedicalReport');
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 const userRoutes       = require('./routes/users');
@@ -18,6 +20,7 @@ const medicationRoutes = require('./routes/medications');
 const adherenceRoutes  = require('./routes/adherence');
 const alertRoutes      = require('./routes/alerts');
 const noteRoutes       = require('./routes/patientNotes');
+const reportRoutes     = require('./routes/reports');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -82,6 +85,8 @@ app.use('/api/medications',  medicationRoutes);
 app.use('/api/adherence',    adherenceRoutes);
 app.use('/api/alerts',       alertRoutes);
 app.use('/api/patient-notes', noteRoutes);
+app.use('/api/reports',       reportRoutes);
+app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', time: new Date() }));
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────

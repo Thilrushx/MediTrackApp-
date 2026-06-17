@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { User, Patient, Medication, AdherenceLog, EscalationAlert, PatientNote } from './types';
+import { User, Patient, Medication, AdherenceLog, EscalationAlert, PatientNote, MedicalReport } from './types';
 import { api } from './api';
 
 export const SESSION = {
@@ -17,6 +17,7 @@ interface DataCtx {
   logs:        AdherenceLog[];
   alerts:      EscalationAlert[];
   notes:       PatientNote[];
+  reports:     MedicalReport[];
   fetchAll:    () => void;
 }
 
@@ -29,6 +30,7 @@ const Ctx = createContext<DataCtx>({
   logs:        [],
   alerts:      [],
   notes:       [],
+  reports:     [],
   fetchAll:    () => {},
 });
 
@@ -43,17 +45,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [logs,        setLogs]        = useState<AdherenceLog[]>([]);
   const [alerts,      setAlerts]      = useState<EscalationAlert[]>([]);
   const [notes,       setNotes]       = useState<PatientNote[]>([]);
+  const [reports,     setReports]     = useState<MedicalReport[]>([]);
 
   const fetchAll = useCallback(async () => {
     setError(null);
     try {
-      const [u, p, m, l, a, n] = await Promise.all([
+      const [u, p, m, l, a, n, r] = await Promise.all([
         api.getUsers(),
         api.getPatients(),
         api.getMedications(),
         api.getLogs(),
         api.getAlerts(),
         api.getNotes(),
+        api.getReports(),
       ]);
       setUsers(u);
       setPatients(p);
@@ -61,6 +65,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setLogs(l);
       setAlerts(a);
       setNotes(n);
+      setReports(r);
     } catch (e: any) {
       console.error('API fetch failed:', e);
       setError('Cannot connect to MediTrack API. Make sure the backend is running on port 5000.');
@@ -72,7 +77,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   return (
-    <Ctx.Provider value={{ loading, error, users, patients, medications, logs, alerts, notes, fetchAll }}>
+    <Ctx.Provider value={{ loading, error, users, patients, medications, logs, alerts, notes, reports, fetchAll }}>
       {children}
     </Ctx.Provider>
   );
