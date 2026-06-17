@@ -354,14 +354,14 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-1">
           <p style={{ color: 'black' }}>© 2026 MediTrack Cloud System. Designed & Completed for Cloud Application Development.</p>
           <p className="text-slate-300" style={{ color: 'black' }}>
-            Student: B.G.T.D. Wijerathne | Reg: SEU/IS/20/ICT/055 | Specialization: Software
+            Student: B.G.T.D. Wijerathne | Reg: SEU/IS/20/ICT/055 | Specialization: Software Technologies
           </p>
           <div className="flex justify-center items-center gap-3 pt-2">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-200 text-[9px]">
               Azure SQL Alternate: Express In-Memory Stack
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-200 text-[9px]">
-             
+             AI- Powerde
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-200 text-[9px]">
               Notification Hub: Real-time Client Alerts

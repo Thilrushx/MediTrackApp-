@@ -96,7 +96,7 @@ export default function DoctorClinicalInsights({
 
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-slate-400 font-mono">
-                Model: <strong className="text-slate-600">Gemini 3.5 Flash</strong> (Structured Analysis)
+                Model: <strong className="text-slate-600">Microsoft Azure</strong> (Structured Analysis)
               </span>
               <button
                 type="submit"
