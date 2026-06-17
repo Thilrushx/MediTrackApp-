@@ -31,7 +31,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests with no origin (Postman, mobile) or from allowed list
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
     cb(new Error(`CORS: origin ${origin} not allowed`));
   },
@@ -42,6 +41,40 @@ app.use(cors({
 
 app.use(express.json());
 
+// ── Request / Response Logger ─────────────────────────────────────────────────
+const RESET  = '\x1b[0m';
+const DIM    = '\x1b[2m';
+const GREEN  = '\x1b[32m';
+const YELLOW = '\x1b[33m';
+const RED    = '\x1b[31m';
+const CYAN   = '\x1b[36m';
+const BOLD   = '\x1b[1m';
+
+const statusColor = (code) => {
+  if (code >= 500) return RED;
+  if (code >= 400) return YELLOW;
+  return GREEN;
+};
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  const ts    = new Date().toISOString();
+
+  res.on('finish', () => {
+    const ms    = Date.now() - start;
+    const color = statusColor(res.statusCode);
+    console.log(
+      `${DIM}[${ts}]${RESET} ` +
+      `${BOLD}${CYAN}${req.method.padEnd(7)}${RESET} ` +
+      `${req.originalUrl.padEnd(40)} ` +
+      `${color}${BOLD}${res.statusCode}${RESET} ` +
+      `${DIM}${ms}ms${RESET}`
+    );
+  });
+
+  next();
+});
+
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/users',        userRoutes);
 app.use('/api/patients',     patientRoutes);
@@ -50,6 +83,12 @@ app.use('/api/adherence',    adherenceRoutes);
 app.use('/api/alerts',       alertRoutes);
 app.use('/api/patient-notes', noteRoutes);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', time: new Date() }));
+
+// ── 404 Handler ───────────────────────────────────────────────────────────────
+app.use((req, res) => {
+  console.warn(`${YELLOW}[404]${RESET} ${req.method} ${req.originalUrl} — route not found`);
+  res.status(404).json({ error: `Route ${req.method} ${req.originalUrl} not found` });
+});
 
 // ── Seed ──────────────────────────────────────────────────────────────────────
 const seed = async () => {
@@ -127,9 +166,32 @@ const seed = async () => {
   console.log('✅ Seed data inserted.');
 };
 
+// ── Global Error Handler ─────────────────────────────────────────────────────
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+  const status = err.status || 500;
+  console.error(
+    `${RED}${BOLD}[ERROR]${RESET} ` +
+    `${req.method} ${req.originalUrl}\n` +
+    `${RED}  ${err.message}${RESET}` +
+    (err.stack ? `\n${DIM}${err.stack.split('\n').slice(1, 4).join('\n')}${RESET}` : '')
+  );
+  res.status(status).json({ error: err.message || 'Internal server error' });
+});
+
+// ── Unhandled promise rejections & uncaught exceptions ────────────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error(`${RED}${BOLD}[UNHANDLED REJECTION]${RESET}`, reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error(`${RED}${BOLD}[UNCAUGHT EXCEPTION]${RESET}`, err.message);
+  console.error(DIM + err.stack + RESET);
+  process.exit(1);
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 sequelize
   .sync({ alter: true })
   .then(() => { console.log('✅ Database synced.'); return seed(); })
   .then(() => app.listen(PORT, () => console.log(`🚀 MediTrack API → http://localhost:${PORT}`)))
-  .catch((err) => { console.error('❌ Startup failed:', err.message); process.exit(1); });
+  .catch((err) => { console.error(`${RED}❌ Startup failed:${RESET}`, err.message); process.exit(1); });
