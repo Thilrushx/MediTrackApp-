@@ -1,0 +1,388 @@
+import React, { useState } from 'react';
+import {
+  Users, Plus, Trash2, Edit3, Pill, X, Check, Activity,
+  ClipboardList, UserPlus, HeartPulse, AlertTriangle,
+} from 'lucide-react';
+import { Patient, Medication, AdherenceLog, EscalationAlert, User } from '../types';
+import { api } from '../api';
+
+interface Props {
+  patients: Patient[];
+  medications: Medication[];
+  logs: AdherenceLog[];
+  alerts: EscalationAlert[];
+  caregivers: User[];
+  doctorId: string;
+  onRefresh: () => void;
+}
+
+const EMPTY_PATIENT = { name: '', age: '', gender: 'Male', condition: '', phone: '', email: '', caregiverId: '' };
+const EMPTY_MED = { name: '', dosage: '', frequency: 'Daily', times: '08:00', category: 'Diabetes', notes: '', startDate: '' };
+
+export default function DoctorPanel({ patients, medications, logs, alerts, caregivers, doctorId, onRefresh }: Props) {
+  const [tab, setTab] = useState<'dashboard' | 'patients' | 'prescribe'>('dashboard');
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [showPatientModal, setShowPatientModal] = useState(false);
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [patientForm, setPatientForm] = useState<any>(EMPTY_PATIENT);
+  const [medForm, setMedForm] = useState<any>(EMPTY_MED);
+  const [patientMedId, setPatientMedId] = useState('');
+  const [error, setError] = useState('');
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  const totalMeds   = medications.length;
+  const takenLogs   = logs.filter(l => l.status === 'taken').length;
+  const missedLogs  = logs.filter(l => l.status === 'missed').length;
+  const activeAlerts = alerts.filter(a => a.status === 'notified').length;
+  const adherence   = takenLogs + missedLogs > 0
+    ? Math.round((takenLogs / (takenLogs + missedLogs)) * 100) : 100;
+
+  // ── Patient CRUD ───────────────────────────────────────────────────────────
+  const openCreate = () => {
+    setEditingPatient(null);
+    setPatientForm(EMPTY_PATIENT);
+    setShowPatientModal(true);
+  };
+
+  const openEdit = (p: Patient) => {
+    setEditingPatient(p);
+    setPatientForm({ name: p.name, age: p.age, gender: p.gender, condition: p.condition || '', phone: p.phone || '', email: p.email || '', caregiverId: p.caregiverId || '' });
+    setShowPatientModal(true);
+  };
+
+  const submitPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const data = { ...patientForm, age: Number(patientForm.age), doctorId };
+      if (editingPatient) await api.updatePatient(editingPatient.id, data);
+      else await api.createPatient(data);
+      setShowPatientModal(false);
+      onRefresh();
+    } catch { setError('Failed to save patient.'); }
+  };
+
+  const deletePatient = async (id: string) => {
+    if (!confirm('Delete this patient and all their records?')) return;
+    await api.deletePatient(id);
+    onRefresh();
+  };
+
+  // ── Prescribe ──────────────────────────────────────────────────────────────
+  const submitMed = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!patientMedId) { setError('Select a patient first.'); return; }
+    try {
+      const patient = patients.find(p => p.id === patientMedId);
+      await api.createMedication({
+        ...medForm,
+        patientId: patientMedId,
+        times: medForm.times.split(',').map((t: string) => t.trim()),
+        startDate: medForm.startDate || new Date().toISOString().split('T')[0],
+        prescribedBy: 'Dr. Evans',
+        recipientEmail: patient?.email || '',
+        recipientPhone: patient?.phone || '',
+      });
+      setMedForm(EMPTY_MED);
+      setPatientMedId('');
+      onRefresh();
+    } catch { setError('Failed to prescribe medication.'); }
+  };
+
+  // ── Selected patient meds ──────────────────────────────────────────────────
+  const patientMeds = (id: string) => medications.filter(m => m.patientId === id);
+
+  return (
+    <div className="space-y-6">
+
+      {/* Tab Bar */}
+      <div className="flex gap-1 bg-white p-1 rounded-2xl border border-slate-100 shadow-sm w-fit">
+        {(['dashboard', 'patients', 'prescribe'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold capitalize transition ${
+              tab === t ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:bg-slate-50'
+            }`}>{t === 'prescribe' ? 'Prescribe Medicine' : t}
+          </button>
+        ))}
+      </div>
+
+      {/* ── DASHBOARD ── */}
+      {tab === 'dashboard' && (
+        <div className="space-y-6">
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'My Patients',    value: patients.length, icon: <Users className="w-5 h-5" />,       color: 'bg-blue-50 text-blue-700 border-blue-100' },
+              { label: 'Medications',    value: totalMeds,       icon: <Pill className="w-5 h-5" />,        color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+              { label: 'Adherence Rate', value: `${adherence}%`, icon: <HeartPulse className="w-5 h-5" />, color: 'bg-teal-50 text-teal-700 border-teal-100' },
+              { label: 'Active Alerts',  value: activeAlerts,    icon: <AlertTriangle className="w-5 h-5" />, color: 'bg-rose-50 text-rose-700 border-rose-100' },
+            ].map(s => (
+              <div key={s.label} className={`rounded-2xl border p-5 flex items-center gap-4 ${s.color}`}>
+                <div className="p-2 rounded-xl bg-white/60">{s.icon}</div>
+                <div>
+                  <p className="text-2xl font-bold">{s.value}</p>
+                  <p className="text-xs font-medium opacity-70">{s.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Patient overview table */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2"><ClipboardList className="w-4 h-4 text-blue-500" /> Patient Overview</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-mono">
+                  <tr>{['Patient', 'Age', 'Condition', 'Caregiver', 'Meds', 'Adherence'].map(h => <th key={h} className="px-4 py-3">{h}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {patients.map(p => {
+                    const pMeds  = patientMeds(p.id);
+                    const pLogs  = logs.filter(l => pMeds.some(m => m.id === l.medicationId));
+                    const pTaken = pLogs.filter(l => l.status === 'taken').length;
+                    const pMissed = pLogs.filter(l => l.status === 'missed').length;
+                    const pAdh   = pTaken + pMissed > 0 ? Math.round((pTaken / (pTaken + pMissed)) * 100) : 100;
+                    const cg = caregivers.find(c => c.id === p.caregiverId);
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 font-semibold text-slate-800">{p.name}</td>
+                        <td className="px-4 py-3 text-slate-500">{p.age}</td>
+                        <td className="px-4 py-3 text-slate-600">{p.condition || '—'}</td>
+                        <td className="px-4 py-3 text-slate-600">{cg?.name || '—'}</td>
+                        <td className="px-4 py-3"><span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md font-mono">{pMeds.length}</span></td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-md font-mono font-semibold ${pAdh >= 85 ? 'bg-emerald-50 text-emerald-700' : pAdh >= 60 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'}`}>{pAdh}%</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Active alerts */}
+          {activeAlerts > 0 && (
+            <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-6">
+              <h3 className="font-semibold text-rose-700 mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Active Escalation Alerts</h3>
+              <div className="space-y-2">
+                {alerts.filter(a => a.status === 'notified').map(a => (
+                  <div key={a.id} className="flex items-start justify-between gap-4 p-3 bg-rose-50 rounded-xl border border-rose-100 text-xs">
+                    <p className="text-rose-800">{a.message}</p>
+                    <button onClick={async () => { await api.resolveAlert(a.id); onRefresh(); }}
+                      className="shrink-0 px-2 py-1 bg-rose-600 text-white rounded-lg font-semibold hover:bg-rose-700">
+                      Resolve
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── PATIENTS ── */}
+      {tab === 'patients' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-slate-800">My Patients</h3>
+            <button onClick={openCreate}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition shadow">
+              <UserPlus className="w-4 h-4" /> Add Patient
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {patients.map(p => {
+              const pMeds = patientMeds(p.id);
+              const cg = caregivers.find(c => c.id === p.caregiverId);
+              const isSelected = selectedPatientId === p.id;
+              return (
+                <div key={p.id}
+                  className={`bg-white rounded-2xl border p-5 shadow-sm cursor-pointer transition ${isSelected ? 'border-blue-300 ring-1 ring-blue-200' : 'border-slate-100 hover:border-slate-300'}`}
+                  onClick={() => setSelectedPatientId(isSelected ? null : p.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-semibold text-slate-800">{p.name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{p.age} yrs · {p.gender} · {p.condition || 'No condition'}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">Caregiver: {cg?.name || 'None'}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={(e) => { e.stopPropagation(); openEdit(p); }}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); deletePatient(p.id); }}
+                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {isSelected && pMeds.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
+                      <p className="text-[10px] font-mono font-bold text-slate-400 uppercase">Prescriptions</p>
+                      {pMeds.map(m => (
+                        <div key={m.id} className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl">
+                          <span className="font-semibold text-slate-700">{m.name} <span className="font-normal text-slate-500">{m.dosage}</span></span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-400 font-mono">{m.times.join(', ')}</span>
+                            <button onClick={async (e) => { e.stopPropagation(); await api.deleteMedication(m.id); onRefresh(); }}
+                              className="text-rose-400 hover:text-rose-600"><Trash2 className="w-3 h-3" /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── PRESCRIBE ── */}
+      {tab === 'prescribe' && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 max-w-xl">
+          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2"><Pill className="w-4 h-4 text-blue-500" /> Prescribe Medication</h3>
+          {error && <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-xl mb-3">{error}</p>}
+          <form onSubmit={submitMed} className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Select Patient</label>
+              <select value={patientMedId} onChange={e => setPatientMedId(e.target.value)}
+                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800">
+                <option value="">— choose patient —</option>
+                {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[['Drug name', 'name', 'e.g. Metformin'], ['Dosage', 'dosage', 'e.g. 500mg']].map(([label, key, ph]) => (
+                <div key={key}>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>
+                  <input value={medForm[key]} onChange={e => setMedForm({ ...medForm, [key]: e.target.value })}
+                    placeholder={ph} required
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800" />
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Frequency</label>
+                <select value={medForm.frequency} onChange={e => setMedForm({ ...medForm, frequency: e.target.value })}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  {['Daily', 'Twice daily', 'Weekly', 'As needed'].map(f => <option key={f}>{f}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Category</label>
+                <select value={medForm.category} onChange={e => setMedForm({ ...medForm, category: e.target.value })}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  {['Diabetes', 'Heart & Pressure', 'Cholesterol', 'Vitamins', 'Pain Relief', 'Other'].map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Times (HH:MM, comma sep.)</label>
+                <input value={medForm.times} onChange={e => setMedForm({ ...medForm, times: e.target.value })}
+                  placeholder="08:00, 20:00" className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-800" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Start Date</label>
+                <input type="date" value={medForm.startDate} onChange={e => setMedForm({ ...medForm, startDate: e.target.value })}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Clinical Notes</label>
+              <textarea value={medForm.notes} onChange={e => setMedForm({ ...medForm, notes: e.target.value })}
+                rows={2} placeholder="Instructions for patient..."
+                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800" />
+            </div>
+            <button type="submit"
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs transition">
+              Prescribe & Save
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* ── PATIENT MODAL ── */}
+      {showPatientModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 text-white flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">{editingPatient ? 'Edit Patient' : 'New Patient'}</h3>
+                <p className="text-xs text-blue-100">Fill in patient details</p>
+              </div>
+              <button onClick={() => setShowPatientModal(false)}><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={submitPatient} className="p-6 space-y-3">
+              {error && <p className="text-xs text-rose-600 bg-rose-50 p-2 rounded-lg">{error}</p>}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
+                  <input value={patientForm.name} onChange={e => setPatientForm({ ...patientForm, name: e.target.value })}
+                    required placeholder="Patient full name"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Age</label>
+                  <input type="number" value={patientForm.age} onChange={e => setPatientForm({ ...patientForm, age: e.target.value })}
+                    required placeholder="Age"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Gender</label>
+                  <select value={patientForm.gender} onChange={e => setPatientForm({ ...patientForm, gender: e.target.value })}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                    {['Male', 'Female', 'Other'].map(g => <option key={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Medical Condition</label>
+                  <input value={patientForm.condition} onChange={e => setPatientForm({ ...patientForm, condition: e.target.value })}
+                    placeholder="e.g. Diabetes, Hypertension"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Phone</label>
+                  <input value={patientForm.phone} onChange={e => setPatientForm({ ...patientForm, phone: e.target.value })}
+                    placeholder="+1 (555) 000-0000"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                  <input type="email" value={patientForm.email} onChange={e => setPatientForm({ ...patientForm, email: e.target.value })}
+                    placeholder="patient@example.com"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Assign Caregiver</label>
+                  <select value={patientForm.caregiverId} onChange={e => setPatientForm({ ...patientForm, caregiverId: e.target.value })}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                    <option value="">— None —</option>
+                    {caregivers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowPatientModal(false)}
+                  className="px-4 py-2 text-xs text-slate-500 hover:bg-slate-50 rounded-xl">Cancel</button>
+                <button type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition">
+                  <Check className="w-3.5 h-3.5 inline mr-1" />{editingPatient ? 'Update' : 'Create Patient'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
