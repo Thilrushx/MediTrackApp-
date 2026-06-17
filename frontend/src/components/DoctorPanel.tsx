@@ -27,7 +27,8 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
   const [patientForm, setPatientForm] = useState<any>(EMPTY_PATIENT);
   const [medForm, setMedForm] = useState<any>(EMPTY_MED);
   const [patientMedId, setPatientMedId] = useState('');
-  const [error, setError] = useState('');
+  const [patientError, setPatientError] = useState('');
+  const [medError, setMedError] = useState('');
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const totalMeds   = medications.length;
@@ -41,25 +42,38 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
   const openCreate = () => {
     setEditingPatient(null);
     setPatientForm(EMPTY_PATIENT);
+    setPatientError('');
     setShowPatientModal(true);
   };
 
   const openEdit = (p: Patient) => {
     setEditingPatient(p);
     setPatientForm({ name: p.name, age: p.age, gender: p.gender, condition: p.condition || '', phone: p.phone || '', email: p.email || '', caregiverId: p.caregiverId || '' });
+    setPatientError('');
     setShowPatientModal(true);
   };
 
   const submitPatient = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setPatientError('');
     try {
-      const data = { ...patientForm, age: Number(patientForm.age), doctorId };
-      if (editingPatient) await api.updatePatient(editingPatient.id, data);
-      else await api.createPatient(data);
+      // On create include doctorId; on edit only send editable fields
+      if (editingPatient) {
+        await api.updatePatient(editingPatient.id, {
+          name: patientForm.name,
+          age: Number(patientForm.age),
+          gender: patientForm.gender,
+          condition: patientForm.condition,
+          phone: patientForm.phone,
+          email: patientForm.email,
+          caregiverId: patientForm.caregiverId,
+        });
+      } else {
+        await api.createPatient({ ...patientForm, age: Number(patientForm.age), doctorId });
+      }
       setShowPatientModal(false);
       onRefresh();
-    } catch { setError('Failed to save patient.'); }
+    } catch { setPatientError('Failed to save patient. Please try again.'); }
   };
 
   const deletePatient = async (id: string) => {
@@ -71,8 +85,8 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
   // ── Prescribe ──────────────────────────────────────────────────────────────
   const submitMed = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    if (!patientMedId) { setError('Select a patient first.'); return; }
+    setMedError('');
+    if (!patientMedId) { setMedError('Select a patient first.'); return; }
     try {
       const patient = patients.find(p => p.id === patientMedId);
       await api.createMedication({
@@ -87,7 +101,7 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
       setMedForm(EMPTY_MED);
       setPatientMedId('');
       onRefresh();
-    } catch { setError('Failed to prescribe medication.'); }
+    } catch { setMedError('Failed to prescribe medication. Check all fields.'); }
   };
 
   // ── Selected patient meds ──────────────────────────────────────────────────
@@ -249,7 +263,7 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
       {tab === 'prescribe' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 max-w-xl">
           <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2"><Pill className="w-4 h-4 text-blue-500" /> Prescribe Medication</h3>
-          {error && <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-xl mb-3">{error}</p>}
+          {medError && <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-xl mb-3">{medError}</p>}
           <form onSubmit={submitMed} className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Select Patient</label>
@@ -323,7 +337,7 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
               <button onClick={() => setShowPatientModal(false)}><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={submitPatient} className="p-6 space-y-3">
-              {error && <p className="text-xs text-rose-600 bg-rose-50 p-2 rounded-lg">{error}</p>}
+              {patientError && <p className="text-xs text-rose-600 bg-rose-50 p-2 rounded-lg">{patientError}</p>}
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>

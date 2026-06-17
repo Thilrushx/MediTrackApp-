@@ -16,11 +16,19 @@ const create = async (data) => {
 const update = async (id, data) => {
   const patient = await Patient.findByPk(id);
   if (!patient) return null;
-  return patient.update(data);
+  // Only allow safe fields — never overwrite id or doctorId
+  const { name, age, gender, condition, phone, email, caregiverId } = data;
+  return patient.update({ name, age, gender, condition, phone, email, caregiverId });
 };
 
 const remove = async (id) => {
-  await Medication.destroy({ where: { patientId: id } });
+  const AdherenceLog = require('../models/AdherenceLog');
+  const meds = await Medication.findAll({ where: { patientId: id } });
+  const medIds = meds.map(m => m.id);
+  if (medIds.length) {
+    await AdherenceLog.destroy({ where: { medicationId: medIds } });
+    await Medication.destroy({ where: { patientId: id } });
+  }
   return Patient.destroy({ where: { id } });
 };
 
