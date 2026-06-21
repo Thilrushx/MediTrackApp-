@@ -4,11 +4,12 @@ import { MedicalReport, Patient, UserRole } from '../types';
 import { api } from '../api';
 
 interface Props {
-  role:      UserRole;
-  patients:  Patient[];
-  reports:   MedicalReport[];
-  patientId?: string; // if scoped to one patient (caregiver/patient view)
-  onRefresh: () => void;
+  role:       UserRole;
+  patients:   Patient[];
+  reports:    MedicalReport[];
+  patientId?: string;
+  uploadedBy?: string;
+  onRefresh:  () => void;
 }
 
 const CATEGORIES = ['Lab Result', 'Prescription', 'Imaging', 'Discharge Summary', 'Other'] as const;
@@ -21,7 +22,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Other':             'bg-slate-50 text-slate-600 border-slate-200',
 };
 
-export default function ReportsPanel({ role, patients, reports, patientId, onRefresh }: Props) {
+export default function ReportsPanel({ role, patients, reports, patientId, uploadedBy, onRefresh }: Props) {
   const [showUpload,      setShowUpload]      = useState(false);
   const [selectedPatient, setSelectedPatient] = useState('');
   const [reportName,      setReportName]      = useState('');
@@ -54,7 +55,7 @@ export default function ReportsPanel({ role, patients, reports, patientId, onRef
     fd.append('name',       reportName.trim());
     fd.append('category',   category);
     fd.append('patientId',  resolvedPatientId);
-    fd.append('uploadedBy', 'Dr. Evans');
+    fd.append('uploadedBy', uploadedBy || 'Doctor');
 
     try {
       setUploading(true);
@@ -81,7 +82,7 @@ export default function ReportsPanel({ role, patients, reports, patientId, onRef
   };
 
   const openFile = (filename: string) => {
-    window.open(`http://localhost:5000/uploads/${filename}`, '_blank');
+    window.open(`/uploads/${filename}`, '_blank');
   };
 
   return (
@@ -161,7 +162,7 @@ export default function ReportsPanel({ role, patients, reports, patientId, onRef
                       title="View PDF">
                       <Eye className="w-3 h-3" /> View
                     </button>
-                    <a href={`http://localhost:5000/uploads/${r.filename}`} download={r.originalName}
+                    <a href={`/uploads/${r.filename}`} download={r.originalName}
                       className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition"
                       title="Download PDF">
                       <Download className="w-3 h-3" /> Download

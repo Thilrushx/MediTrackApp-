@@ -54,6 +54,8 @@ export const api = {
   // Auth
   login:          (credentials: { email: string; password: string }) =>
     req('POST', '/auth/login', credentials),
+  register: (data: { name: string; email: string; password: string; specialty?: string; registerCode: string }) =>
+    req('POST', '/auth/register', data),
   getMe:          () => req('GET', '/auth/me'),
   logout:         () => req('POST', '/auth/logout'),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>

@@ -29,6 +29,7 @@ export default function DoctorPage() {
             alerts={alerts}
             caregivers={caregivers}
             doctorId={user?.id ?? ''}
+            doctorName={user?.name ?? 'Doctor'}
             onRefresh={fetchAll}
           />
           <div className="border-t border-slate-100 pt-8">
@@ -36,6 +37,7 @@ export default function DoctorPage() {
               role="doctor"
               patients={doctorPatients}
               reports={reports}
+              uploadedBy={user?.name ?? 'Doctor'}
               onRefresh={fetchAll}
             />
           </div>

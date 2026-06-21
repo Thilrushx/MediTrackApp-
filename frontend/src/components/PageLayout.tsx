@@ -106,15 +106,18 @@ export default function PageLayout({ role, alerts, onRefresh, children }: Props)
           {/* Brand */}
           <Link to="/" className="flex items-center gap-3 shrink-0">
             <div className="w-9 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 flex items-center justify-center text-white shadow shadow-teal-200 transition">
-              <HeartPulse className="w-5 h-5" />
+              <HeartPulse className="w-5 h-5 animate-pulse" />
             </div>
-            <div className="hidden sm:block">
-              <span className="font-bold text-lg text-slate-900 tracking-tight">
-                Medi<span className="text-teal-600">Track</span>
-              </span>
-              <span className="ml-2 text-[10px] font-mono bg-teal-50 text-teal-700 border border-teal-100 px-1.5 py-0.5 rounded">
-                AI Adherence
-              </span>
+            <div className="hidden sm:block -space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[20px] text-slate-900 tracking-tight">
+                  Medi<span className="text-teal-600">Track</span>
+                </span>
+                <span className="text-[10px] font-mono bg-teal-100 text-teal-700 px-1.5 py-px rounded">
+                  AI Adherence
+                </span>
+              </div>
+              <p className="text-sm font-medium text-slate-500 leading-none">Cloud Health Care.</p>
             </div>
           </Link>
 

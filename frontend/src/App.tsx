@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './AuthContext';
 import { DataProvider }          from './DataContext';
 import PrivateRoute              from './components/PrivateRoute';
 import LoginPage                 from './pages/LoginPage';
+import PortalLoginPage           from './pages/PortalLoginPage';
 import HomePage                  from './pages/HomePage';
 import DoctorPage                from './pages/DoctorPage';
 import CaregiverPage             from './pages/CaregiverPage';
@@ -33,7 +34,8 @@ export default function App() {
       <DataProvider>
         <Routes>
           {/* Public */}
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login"        element={<LoginPage />} />
+          <Route path="/login/:role"  element={<PortalLoginPage />} />
 
           {/* Root — shows home or redirects to role portal if logged in */}
           <Route path="/" element={<RootRedirect />} />

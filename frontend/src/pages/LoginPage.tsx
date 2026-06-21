@@ -207,7 +207,10 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-xs text-slate-400 mt-6">
-            Accounts are created by your doctor. Contact Dr. Evans if you need access.
+            Accounts are created by your doctor. Contact Dr. K.Perera if you need access.
+          </p>
+          <p className="text-center text-xs text-slate-400 mt-8">
+            +94 76 123 4567
           </p>
         </div>
       </div>

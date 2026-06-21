@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Users, Trash2, Edit3, Pill, X, Check,
-  ClipboardList, UserPlus, HeartPulse, AlertTriangle, Plus,
+  ClipboardList, UserPlus, HeartPulse, AlertTriangle, Plus, Eye, EyeOff,
 } from 'lucide-react';
 import { Patient, Medication, AdherenceLog, EscalationAlert, User } from '../types';
 import { api } from '../api';
@@ -13,13 +13,14 @@ interface Props {
   alerts: EscalationAlert[];
   caregivers: User[];
   doctorId: string;
+  doctorName: string;
   onRefresh: () => void;
 }
 
-const EMPTY_PATIENT = { name: '', age: '', gender: 'Male', condition: '', phone: '', email: '', caregiverId: '' };
+const EMPTY_PATIENT = { name: '', age: '', gender: 'Male', condition: '', phone: '', email: '', caregiverId: '', password: '' };
 const EMPTY_MED     = { name: '', dosage: '', frequency: 'Daily', times: '08:00', category: 'Diabetes', notes: '', startDate: '' };
 
-export default function DoctorPanel({ patients, medications, logs, alerts, caregivers, doctorId, onRefresh }: Props) {
+export default function DoctorPanel({ patients, medications, logs, alerts, caregivers, doctorId, doctorName, onRefresh }: Props) {
   const [tab, setTab] = useState<'dashboard' | 'patients'>('dashboard');
 
   // Patient modal
@@ -27,6 +28,7 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
   const [editingPatient, setEditingPatient]     = useState<Patient | null>(null);
   const [patientForm, setPatientForm]           = useState<any>(EMPTY_PATIENT);
   const [patientError, setPatientError]         = useState('');
+  const [showPassword, setShowPassword]         = useState(false);
 
   // Prescribe modal — bound to a specific patient
   const [prescribeFor, setPrescribeFor] = useState<Patient | null>(null);
@@ -72,11 +74,27 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
           caregiverId: patientForm.caregiverId,
         });
       } else {
-        await api.createPatient({ ...patientForm, age: Number(patientForm.age), doctorId });
+        if (!patientForm.password || patientForm.password.length < 8) {
+          setPatientError('Password is required and must be at least 8 characters.');
+          return;
+        }
+        await api.createPatient({
+          name:        patientForm.name,
+          age:         Number(patientForm.age),
+          gender:      patientForm.gender,
+          condition:   patientForm.condition,
+          phone:       patientForm.phone,
+          email:       patientForm.email,
+          caregiverId: patientForm.caregiverId,
+          password:    patientForm.password,
+          doctorId,
+        });
       }
       setShowPatientModal(false);
       onRefresh();
-    } catch { setPatientError('Failed to save patient. Please try again.'); }
+    } catch (err: any) {
+      setPatientError(err.message || 'Failed to save patient. Please try again.');
+    }
   };
 
   const deletePatient = async (id: string) => {
@@ -101,7 +119,7 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
         patientId:      prescribeFor!.id,
         times:          medForm.times.split(',').map((t: string) => t.trim()),
         startDate:      medForm.startDate || new Date().toISOString().split('T')[0],
-        prescribedBy:   'Dr. Evans',
+        prescribedBy:   doctorName,
         recipientEmail: prescribeFor!.email || '',
         recipientPhone: prescribeFor!.phone || '',
       });
@@ -341,6 +359,34 @@ export default function DoctorPanel({ patients, medications, logs, alerts, careg
                     placeholder="patient@example.com"
                     className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
                 </div>
+                {/* Password — only shown when creating a new patient */}
+                {!editingPatient && (
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Login Password <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={patientForm.password}
+                        onChange={e => setPatientForm({ ...patientForm, password: e.target.value })}
+                        placeholder="Min. 8 characters"
+                        required
+                        className="w-full text-xs p-2.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(p => !p)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      This will be the patient's login password for the Patient Portal.
+                    </p>
+                  </div>
+                )}
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Assign Caregiver</label>
                   <select value={patientForm.caregiverId} onChange={e => setPatientForm({ ...patientForm, caregiverId: e.target.value })}

@@ -3,7 +3,7 @@ import { HeartPulse, Stethoscope, UserCheck, User, ArrowRight, Activity, Shield 
 
 const ROLES = [
   {
-    to:          '/doctor',
+    to:          '/login/doctor',
     label:       'Doctor Portal',
     sub:         'Dr. Evans',
     description: 'Manage patients, prescribe medications, view adherence dashboards and resolve escalation alerts.',
@@ -15,7 +15,7 @@ const ROLES = [
     btn:         'bg-blue-600 hover:bg-blue-700',
   },
   {
-    to:          '/caregiver',
+    to:          '/login/caregiver',
     label:       'Caregiver Portal',
     sub:         'Sarah Peterson',
     description: 'View assigned patients, monitor their medication schedules and track daily dose adherence.',
@@ -27,7 +27,7 @@ const ROLES = [
     btn:         'bg-purple-600 hover:bg-purple-700',
   },
   {
-    to:          '/patient',
+    to:          '/login/patient',
     label:       'Patient Portal',
     sub:         'William Johnson',
     description: "View your daily medication schedule, mark doses as taken or missed and submit personal health notes.",
@@ -50,9 +50,20 @@ export default function HomePage() {
           <div className="w-9 h-9 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow shadow-teal-200">
             <HeartPulse className="w-5 h-5 animate-pulse" />
           </div>
-          <div>
-            <span className="font-bold text-lg text-slate-900 tracking-tight">Medi<span className="text-teal-600">Track</span></span>
-            <span className="ml-2 text-[10px] font-mono bg-teal-50 text-teal-700 border border-teal-100 px-2 py-0.5 rounded">AI Adherence</span>
+
+          <div className="flex items-center gap-3">
+            <div className="-space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[20px] text-slate-900 tracking-tight">
+                  Medi<span className="text-teal-600">Track</span>
+                </span>
+                <span className="text-[10px] font-mono bg-teal-100 text-teal-700 px-1.5 py-px rounded">
+                  AI Adherence
+                </span>
+              </div>
+              <p className="text-base font-medium text-slate-600">Cloud Health Care.</p>
+            </div>
+
           </div>
         </div>
       </header>
@@ -95,9 +106,6 @@ export default function HomePage() {
               <div className={`bg-gradient-to-br ${r.gradient} p-6 text-white`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-2.5 bg-white/20 rounded-xl">{r.icon}</div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-white/20 border border-white/30">
-                    {r.sub}
-                  </span>
                 </div>
                 <h2 className="text-lg font-bold">{r.label}</h2>
                 <p className="text-xs mt-1 opacity-80 leading-relaxed">{r.description}</p>
@@ -126,9 +134,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="mt-auto bg-white border-t border-slate-100 py-5 text-center text-[11px] text-slate-400 font-mono">
+      <footer className="mt-auto bg-white border-t border-slate-100 py-6 text-center text-[11px] text-slate-500 font-mono font-bold">
+        <p className="mb-1">"Health is wealth. Wellness is happiness."</p>
         <p>© 2026 MediTrack Cloud System · B.G.T.D. Wijerathne · SEU/IS/20/ICT/055</p>
-        <p className="text-slate-300 mt-0.5">Azure SQL · Express.js REST API · React + Vite · MySQL Sequelize ORM</p>
       </footer>
     </div>
   );

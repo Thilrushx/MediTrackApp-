@@ -1,24 +1,26 @@
 # Dependencies
 node_modules/
 
-# Uploads (PDF files - do not commit)
-uploads/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# Uploads (PDF files — do not commit, persisted via Docker volume)
+uploads/*
+!uploads/.gitkeep
 
-# Environment variables
+# Environment variables — never commit real secrets
 .env
 .env.local
 .env.development
 .env.production
+# .env.example IS committed (contains no secrets)
 
 # Build output
 dist/
 build/
 
 # Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 logs/
 *.log
 

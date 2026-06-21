@@ -25,7 +25,7 @@ const create = async (req, res) => {
       category:     category || 'Other',
       filename:     req.file.filename,
       originalName: req.file.originalname,
-      uploadedBy:   uploadedBy || 'Dr. Evans',
+      uploadedBy:   req.user?.name || uploadedBy || 'Doctor',
     });
     res.status(201).json(report);
   } catch (e) { res.status(400).json({ error: e.message }); }

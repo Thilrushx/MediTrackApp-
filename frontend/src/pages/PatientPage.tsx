@@ -6,15 +6,19 @@ import PatientPanel     from '../components/PatientPanel';
 import ReportsPanel     from '../components/ReportsPanel';
 
 export default function PatientPage() {
-  const { loading, patients, medications, logs, notes, alerts, reports, fetchAll } = useData();
+  const { loading, users, patients, medications, logs, notes, alerts, reports, fetchAll } = useData();
   const { user } = useAuth();
 
-  // The JWT payload carries patientId for patient accounts
   const patientId      = user?.patientId ?? '';
   const currentPatient = patients.find(p => p.id === patientId) || null;
   const patientMeds    = medications.filter(m => m.patientId === patientId);
   const patientLogs    = logs.filter(l => patientMeds.some(m => m.id === l.medicationId));
   const patientReports = reports.filter(r => r.patientId === patientId);
+
+  // Resolve caregiver from the users list using the patient's caregiverId
+  const caregiver = currentPatient?.caregiverId
+    ? users.find(u => u.id === currentPatient.caregiverId) || null
+    : null;
 
   return (
     <PageLayout role="patient" alerts={alerts} onRefresh={fetchAll}>
@@ -27,6 +31,7 @@ export default function PatientPage() {
         <div className="space-y-10">
           <PatientPanel
             patient={currentPatient}
+            caregiver={caregiver}
             medications={patientMeds}
             logs={patientLogs}
             notes={notes}

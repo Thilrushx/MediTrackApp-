@@ -75,10 +75,11 @@ async function run() {
   // ── 3. Hash passwords ──────────────────────────────────────────────────────
   console.log('\n🔑 Hashing passwords...');
   const SALT = 12;
-  const [docHash, cgv1Hash, cgv2Hash, pat1Hash, pat2Hash, pat3Hash] = await Promise.all([
+  const [docHash, cgv1Hash, cgv2Hash, cgv3Hash, pat1Hash, pat2Hash, pat3Hash] = await Promise.all([
     bcrypt.hash('Doctor@123',    SALT),
     bcrypt.hash('Caregiver@123', SALT),
     bcrypt.hash('Caregiver@456', SALT),
+    bcrypt.hash('Caregiver@789', SALT),
     bcrypt.hash('Patient@123',   SALT),
     bcrypt.hash('Patient@456',   SALT),
     bcrypt.hash('Patient@789',   SALT),
@@ -98,11 +99,12 @@ async function run() {
        ('usr-doc-1', 'Dr. Evans',       'doctor',    'evans@meditrack.com',     :docHash,  'General & Cardiology', 1),
        ('usr-cgv-1', 'Sarah Peterson',  'caregiver', 'sarah.care@example.com',  :cgv1Hash, NULL, 1),
        ('usr-cgv-2', 'James Miller',    'caregiver', 'james.care@example.com',  :cgv2Hash, NULL, 1),
+       ('usr-cgv-3', 'Michel Rose',     'caregiver', 'michel.care@example.com', :cgv3Hash, NULL, 1),
        ('usr-pat-1', 'William Johnson', 'patient',   'william@example.com',     :pat1Hash, NULL, 1),
        ('usr-pat-2', 'Margaret Lee',    'patient',   'margaret@example.com',    :pat2Hash, NULL, 1),
        ('usr-pat-3', 'Robert Chang',    'patient',   'robert@example.com',      :pat3Hash, NULL, 1)`,
     {
-      replacements: { docHash, cgv1Hash, cgv2Hash, pat1Hash, pat2Hash, pat3Hash },
+      replacements: { docHash, cgv1Hash, cgv2Hash, cgv3Hash, pat1Hash, pat2Hash, pat3Hash },
       type: sequelize.QueryTypes.INSERT,
     }
   );
@@ -182,6 +184,7 @@ async function run() {
   Doctor     evans@meditrack.com          Doctor@123
   Caregiver  sarah.care@example.com       Caregiver@123
   Caregiver  james.care@example.com       Caregiver@456
+  Caregiver  michel.care@example.com      Caregiver@789
   Patient    william@example.com          Patient@123
   Patient    margaret@example.com         Patient@456
   Patient    robert@example.com           Patient@789

@@ -3,7 +3,8 @@ const ctrl       = require('../controllers/authController');
 const { verifyToken, requireRole } = require('../middleware/auth');
 
 // Public
-router.post('/login',  ctrl.login);
+router.post('/login',    ctrl.login);
+router.post('/register', ctrl.register);
 
 // Authenticated (any role)
 router.get('/me',               verifyToken, ctrl.getMe);

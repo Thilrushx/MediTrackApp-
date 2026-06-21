@@ -13,6 +13,49 @@ const login = async (req, res) => {
   }
 };
 
+// ── POST /api/auth/register  (doctor self-registration) ──────────────────────
+const register = async (req, res) => {
+  try {
+    const { name, email, password, specialty, registerCode } = req.body;
+
+    const DOCTOR_REGISTER_CODE = process.env.DOCTOR_REGISTER_CODE || 'MEDITRACK_DOCTOR_2026';
+    if (registerCode !== DOCTOR_REGISTER_CODE) {
+      return res.status(403).json({ error: 'Invalid registration code.' });
+    }
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email and password are required.' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await User.findOne({ where: { email: normalizedEmail } });
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
+
+    const bcrypt       = require('bcryptjs');
+    const jwt          = require('jsonwebtoken');
+    const passwordHash = await bcrypt.hash(password, 12);
+    const id           = `usr-doc-${Date.now()}`;
+
+    const user = await User.create({
+      id, name: name.trim(), email: normalizedEmail,
+      passwordHash, role: 'doctor',
+      specialty: specialty?.trim() || null, isActive: true,
+    });
+
+    const SECRET  = process.env.JWT_SECRET || 'meditrack_dev_secret_change_in_prod';
+    const payload = { id: user.id, email: user.email, role: user.role, name: user.name, specialty: user.specialty, patientId: null };
+    const token   = jwt.sign(payload, SECRET, { expiresIn: process.env.JWT_EXPIRES || '8h' });
+
+    res.status(201).json({ token, user: payload });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
 // ── GET /api/auth/me  (requires verifyToken) ──────────────────────────────────
 const getMe = async (req, res) => {
   try {
@@ -74,4 +117,4 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { login, getMe, logout, changePassword, resetPassword };
+module.exports = { login, register, getMe, logout, changePassword, resetPassword };

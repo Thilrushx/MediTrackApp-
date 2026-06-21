@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { Pill, Check, X, Clock, Calendar, MessageSquare, TrendingUp, Activity } from 'lucide-react';
-import { Patient, Medication, AdherenceLog, PatientNote } from '../types';
+import { Pill, Check, X, Clock, Calendar, MessageSquare, UserCheck, Phone, Mail } from 'lucide-react';
+import { Patient, Medication, AdherenceLog, PatientNote, User } from '../types';
 import { api } from '../api';
 
 interface Props {
-  patient: Patient | null;
+  patient:     Patient | null;
+  caregiver:   User | null;
   medications: Medication[];
-  logs: AdherenceLog[];
-  notes: PatientNote[];
-  onRefresh: () => void;
+  logs:        AdherenceLog[];
+  notes:       PatientNote[];
+  onRefresh:   () => void;
 }
 
-export default function PatientPanel({ patient, medications, logs, notes, onRefresh }: Props) {
+export default function PatientPanel({ patient, caregiver, medications, logs, notes, onRefresh }: Props) {
   const [tab, setTab]         = useState<'today' | 'history' | 'notes'>('today');
   const [noteText, setNoteText] = useState('');
   const [noteLoading, setNoteLoading] = useState(false);
@@ -63,7 +64,7 @@ export default function PatientPanel({ patient, medications, logs, notes, onRefr
         <div className="absolute right-4 bottom-0 opacity-10"><Pill className="w-32 h-32 rotate-12" /></div>
         <h2 className="text-xl font-bold">{patient ? `Hello, ${patient.name.split(' ')[0]}!` : 'Patient Portal'}</h2>
         <p className="text-emerald-100 text-xs mt-1">{patient?.condition || 'Managing your health daily'}</p>
-        <div className="flex gap-3 mt-4">
+        <div className="flex gap-3 mt-4 flex-wrap">
           {[
             { label: 'Adherence', value: `${adherence}%` },
             { label: 'Taken',    value: takenCount },
@@ -77,6 +78,33 @@ export default function PatientPanel({ patient, medications, logs, notes, onRefr
           ))}
         </div>
       </div>
+
+      {/* Caregiver card */}
+      {caregiver && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+          <div className="w-11 h-11 rounded-2xl bg-purple-100 flex items-center justify-center shrink-0">
+            <UserCheck className="w-5 h-5 text-purple-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest mb-0.5">
+              Your Assigned Caregiver
+            </p>
+            <p className="font-bold text-slate-800 text-sm">{caregiver.name}</p>
+            <div className="flex flex-wrap gap-3 mt-1">
+              {caregiver.email && (
+                <a href={`mailto:${caregiver.email}`}
+                  className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 transition">
+                  <Mail className="w-3 h-3" />
+                  {caregiver.email}
+                </a>
+              )}
+            </div>
+          </div>
+          <span className="shrink-0 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700">
+            Active
+          </span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white p-1 rounded-2xl border border-slate-100 shadow-sm w-fit">

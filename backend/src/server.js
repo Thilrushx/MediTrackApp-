@@ -3,6 +3,7 @@ const path     = require('path');
 const express  = require('express');
 const cors     = require('cors');
 const sequelize = require('./database');
+const { connectWithRetry } = require('./database');
 
 // ── Models (must be required before sync) ────────────────────────────────────
 require('./models/User');
@@ -27,15 +28,25 @@ const app  = express();
 const PORT = process.env.PORT || 5000;
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
+// FRONTEND_URL can be a single URL or comma-separated list for multi-origin support
+// e.g. FRONTEND_URL=http://localhost:3000,https://myapp.azurewebsites.net
+const parseOrigins = (envVal) => {
+  if (!envVal) return [];
+  return envVal.split(',').map(u => u.trim()).filter(Boolean);
+};
+
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  process.env.FRONTEND_URL,
-].filter(Boolean);
+  ...parseOrigins(process.env.FRONTEND_URL),
+].filter((v, i, arr) => arr.indexOf(v) === i); // deduplicate
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    console.warn(`${YELLOW}[CORS]${RESET} Blocked origin: ${origin}`);
     cb(new Error(`CORS: origin ${origin} not allowed`));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -77,34 +88,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── TEMP DEBUG — remove after login is confirmed working ─────────────────────
-app.post('/api/debug-login', async (req, res) => {
-  const bcrypt = require('bcryptjs');
-  const User   = require('./models/User');
-  const { email, password } = req.body;
-  try {
-    const user = await User.findOne({ where: { email } });
-    if (!user) return res.json({ step: 'find_user', result: 'NOT FOUND', email });
-
-    const raw = user.get({ plain: true });
-    const hashLen = raw.passwordHash ? raw.passwordHash.length : 0;
-    const starts  = raw.passwordHash ? raw.passwordHash.slice(0, 7) : 'EMPTY';
-    const match   = hashLen > 0 ? await bcrypt.compare(password, raw.passwordHash) : false;
-
-    res.json({
-      step:      'bcrypt_compare',
-      found:     true,
-      isActive:  raw.isActive,
-      hashLen,
-      starts,
-      match,
-      emailInDB: raw.email,
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 // ── API Routes ────────────────────────────────────────────────────────────────
 // /api/auth is public (login endpoint lives here)
 app.use('/api/auth',          authRoutes);
@@ -118,8 +101,8 @@ app.use('/api/alerts',        alertRoutes);
 app.use('/api/patient-notes', noteRoutes);
 app.use('/api/reports',       reportRoutes);
 
-// Static uploads (authenticated users can request files via the reports route)
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+// Static uploads — served directly, no auth required for file access
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', time: new Date() }));
 
@@ -155,10 +138,11 @@ const seed = async () => {
 
   // Pre-hash passwords (salt rounds = 12, matching authService)
   const SALT = 12;
-  const [docHash, cgv1Hash, cgv2Hash, pat1Hash, pat2Hash, pat3Hash] = await Promise.all([
+  const [docHash, cgv1Hash, cgv2Hash, cgv3Hash, pat1Hash, pat2Hash, pat3Hash] = await Promise.all([
     bcrypt.hash('Doctor@123',    SALT),
     bcrypt.hash('Caregiver@123', SALT),
     bcrypt.hash('Caregiver@456', SALT),
+    bcrypt.hash('Caregiver@789', SALT),
     bcrypt.hash('Patient@123',   SALT),
     bcrypt.hash('Patient@456',   SALT),
     bcrypt.hash('Patient@789',   SALT),
@@ -168,14 +152,15 @@ const seed = async () => {
   await sequelize.query(
     `INSERT INTO Users (id, name, role, email, passwordHash, specialty, isActive)
      VALUES
-       ('usr-doc-1', 'Dr. Evans',       'doctor',    'evans@meditrack.com',    :docHash,  'General & Cardiology', 1),
-       ('usr-cgv-1', 'Sarah Peterson',  'caregiver', 'sarah.care@example.com', :cgv1Hash, NULL, 1),
-       ('usr-cgv-2', 'James Miller',    'caregiver', 'james.care@example.com', :cgv2Hash, NULL, 1),
-       ('usr-pat-1', 'William Johnson', 'patient',   'william@example.com',    :pat1Hash, NULL, 1),
-       ('usr-pat-2', 'Margaret Lee',    'patient',   'margaret@example.com',   :pat2Hash, NULL, 1),
-       ('usr-pat-3', 'Robert Chang',    'patient',   'robert@example.com',     :pat3Hash, NULL, 1)`,
+       ('usr-doc-1', 'Dr. Evans',       'doctor',    'evans@meditrack.com',     :docHash,  'General & Cardiology', 1),
+       ('usr-cgv-1', 'Sarah Peterson',  'caregiver', 'sarah.care@example.com',  :cgv1Hash, NULL, 1),
+       ('usr-cgv-2', 'James Miller',    'caregiver', 'james.care@example.com',  :cgv2Hash, NULL, 1),
+       ('usr-cgv-3', 'Michel Rose',     'caregiver', 'michel.care@example.com', :cgv3Hash, NULL, 1),
+       ('usr-pat-1', 'William Johnson', 'patient',   'william@example.com',     :pat1Hash, NULL, 1),
+       ('usr-pat-2', 'Margaret Lee',    'patient',   'margaret@example.com',    :pat2Hash, NULL, 1),
+       ('usr-pat-3', 'Robert Chang',    'patient',   'robert@example.com',      :pat3Hash, NULL, 1)`,
     {
-      replacements: { docHash, cgv1Hash, cgv2Hash, pat1Hash, pat2Hash, pat3Hash },
+      replacements: { docHash, cgv1Hash, cgv2Hash, cgv3Hash, pat1Hash, pat2Hash, pat3Hash },
       type: sequelize.QueryTypes.INSERT,
     }
   );
@@ -270,12 +255,13 @@ const seed = async () => {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   DEMO LOGIN CREDENTIALS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Doctor    evans@meditrack.com      Doctor@123
-  Caregiver sarah.care@example.com   Caregiver@123
-  Caregiver james.care@example.com   Caregiver@456
-  Patient   william@example.com      Patient@123
-  Patient   margaret@example.com     Patient@456
-  Patient   robert@example.com       Patient@789
+  Doctor    evans@meditrack.com       Doctor@123
+  Caregiver sarah.care@example.com    Caregiver@123
+  Caregiver james.care@example.com    Caregiver@456
+  Caregiver michel.care@example.com   Caregiver@789
+  Patient   william@example.com       Patient@123
+  Patient   margaret@example.com      Patient@456
+  Patient   robert@example.com        Patient@789
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
 };
@@ -291,11 +277,11 @@ process.on('uncaughtException', (err) => {
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-sequelize
-  .sync({ alter: true })
+connectWithRetry()
+  .then(() => sequelize.sync({ alter: true }))
   .then(() => { console.log('✅ Database synced.'); return seed(); })
-  .then(() => app.listen(PORT, () =>
-    console.log(`🚀 MediTrack API → http://localhost:${PORT}`)
+  .then(() => app.listen(PORT, '0.0.0.0', () =>
+    console.log(`🚀 MediTrack API → http://0.0.0.0:${PORT}`)
   ))
   .catch((err) => {
     console.error(`${RED}❌ Startup failed:${RESET}`, err.message);
